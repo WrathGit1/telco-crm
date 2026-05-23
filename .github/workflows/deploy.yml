@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
-
+      - name: Create dist folder
+        run: mkdir -p dist
       - name: Inject credentials
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -24,18 +25,18 @@ jobs:
           import os
           content = content.replace('__SUPABASE_URL__', os.environ['SUPABASE_URL'])
           content = content.replace('__SUPABASE_ANON__', os.environ['SUPABASE_ANON'])
-          with open('index.html', 'w') as f:
+          with open('dist/index.html', 'w') as f:
               f.write(content)
           print('Done')
           "
-          
+        
       - name: Verify injection
-        run: grep -c "supabase.co" index.html && echo "Injection OK" || echo "Injection FAILED"
+        run: grep -c "supabase.co" dist/index.html && echo "Injection OK" || echo "Injection FAILED"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: ./dist
           publish_branch: gh-pages
           force_orphan: true
