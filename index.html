@@ -549,6 +549,7 @@ select.fi { cursor: pointer; }
 // ============================================================
 const SUPABASE_URL  = 'https://leppwkkzuscdobqehhts.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxlcHB3a2t6dXNjZG9icWVoaHRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NDc3ODcsImV4cCI6MjA5NTAyMzc4N30.gDIjSvOiuzMv6WqsDm3FZ9LCsDS5ixIeh9fG5Hd2-c8';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ============================================================
 //  STATE
