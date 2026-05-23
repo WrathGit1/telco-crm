@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>TelcoCRM</title>
+<title>Easytel CRM</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
@@ -287,7 +287,7 @@ select.fi { cursor: pointer; }
 <div class="full-screen" id="screen-loading">
   <div class="spinner-wrap">
     <div class="spinner"></div>
-    <div style="font-size:13px;color:var(--text3)">Loading TelcoCRM...</div>
+    <div style="font-size:13px;color:var(--text3)">Loading Easytel CRM...</div>
   </div>
 </div>
 
@@ -297,11 +297,7 @@ select.fi { cursor: pointer; }
 <div class="full-screen" id="screen-login" style="display:none">
   <div class="auth-box">
     <div class="auth-logo">
-      <div class="auth-logo-icon"><i class="ti ti-signal-5g"></i></div>
-      <div>
-        <h1>TelcoCRM</h1>
-        <p>Ops Manager Portal</p>
-      </div>
+      <img src="logo.png" alt="Easytel" style="height:40px;width:auto">
     </div>
     <div class="form-group">
       <label class="lbl">Email</label>
@@ -325,8 +321,8 @@ select.fi { cursor: pointer; }
 <div class="full-screen" id="screen-set-password" style="display:none">
   <div class="auth-box">
     <div class="auth-logo">
-      <div class="auth-logo-icon"><i class="ti ti-signal-5g"></i></div>
-      <div><h1>TelcoCRM</h1><p>Set your password</p></div>
+      <img src="logo.png" alt="Easytel" style="height:40px;width:auto;margin-bottom:4px">
+      <div><h1>Easytel CRM</h1><p>Set your password</p></div>
     </div>
     <div class="form-group">
       <label class="lbl">New password</label>
@@ -356,8 +352,8 @@ select.fi { cursor: pointer; }
   <!-- ── Sidebar ── -->
   <aside class="sidebar" id="sidebar">
     <div class="logo">
-      <div class="logo-icon"><i class="ti ti-signal-5g"></i></div>
-      <div><h1>TelcoCRM</h1><p>Ops Manager Portal</p></div>
+      <img src="logo.png" alt="Easytel" style="height:28px;width:auto">
+      <div><h1>Easytel CRM</h1><p>Operations</p></div>
     </div>
     <nav>
       <div class="nav-label">Main</div>
@@ -650,7 +646,7 @@ async function doSetPassword(){
   if(pw !== pw2){ err.textContent='Passwords do not match.'; err.style.display='block'; return; }
   const { error } = await sb.auth.updateUser({ password: pw });
   if(error){ err.textContent=error.message; err.style.display='block'; return; }
-  toast('Password set! Welcome to TelcoCRM.');
+  toast('Password set! Welcome to Easytel CRM.');
   await initApp();
 }
 
