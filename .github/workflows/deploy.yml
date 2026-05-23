@@ -30,6 +30,9 @@ jobs:
           print('Done')
           "
         
+      - name: Copy static assets
+        run: cp logo.png dist/logo.png
+
       - name: Verify injection
         run: grep -c "supabase.co" dist/index.html && echo "Injection OK" || echo "Injection FAILED"
 
