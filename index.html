@@ -1104,7 +1104,7 @@ async function logAudit(action, table, recordId, oldData, newData){
 // ============================================================
 //  MODAL HELPERS
 // ============================================================
-function openModal(html){ document.getElementById('modal-root').innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()">${html}</div>`; }
+function openModal(html){ document.getElementById('modal-root').innerHTML = `<div class="modal-overlay">${html}</div>`; }
 function closeModal(){ document.getElementById('modal-root').innerHTML = ''; }
 
 // ============================================================
