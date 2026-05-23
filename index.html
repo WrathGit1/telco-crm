@@ -665,10 +665,43 @@ async function doLogout(){
 // ============================================================
 async function boot(){
   showScreen('loading');
+  let recoveryFlow = false;
 
-  // Check for invite/recovery token in URL
+  // Register listener first so it never misses events
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if(event === 'PASSWORD_RECOVERY'){
+      recoveryFlow = true;
+      showScreen('set-password');
+    } else if(event === 'SIGNED_IN' && session && !recoveryFlow){
+      currentUser = session.user;
+      await initApp();
+    } else if(event === 'SIGNED_OUT'){
+      recoveryFlow = false;
+      showScreen('login');
+    }
+  });
+
+  // PKCE flow: newer Supabase sends ?code=xxx&type=recovery in query params
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const urlType = params.get('type');
+  if(code){
+    recoveryFlow = (urlType === 'recovery' || urlType === 'invite');
+    const { data, error } = await sb.auth.exchangeCodeForSession(code);
+    if(!error && recoveryFlow){
+      showScreen('set-password');
+      return;
+    } else if(!error && data.session){
+      currentUser = data.session.user;
+      await initApp();
+      return;
+    }
+  }
+
+  // Legacy implicit flow: older Supabase sends #type=recovery in hash
   const hash = window.location.hash;
   if(hash.includes('type=invite') || hash.includes('type=recovery')){
+    recoveryFlow = true;
     const { data, error } = await sb.auth.getSessionFromUrl();
     if(!error && data.session){
       showScreen('set-password');
@@ -676,6 +709,7 @@ async function boot(){
     }
   }
 
+  // Normal load — check for existing session
   const { data: { session } } = await sb.auth.getSession();
   if(session){
     currentUser = session.user;
@@ -683,17 +717,6 @@ async function boot(){
   } else {
     showScreen('login');
   }
-
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if(event === 'SIGNED_IN' && session){
-      currentUser = session.user;
-      await initApp();
-    } else if(event === 'SIGNED_OUT'){
-      showScreen('login');
-    } else if(event === 'PASSWORD_RECOVERY'){
-      showScreen('set-password');
-    }
-  });
 }
 
 async function initApp(){
