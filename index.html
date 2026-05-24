@@ -154,6 +154,8 @@ input.fi, select.fi, textarea.fi {
 }
 input.fi:focus, select.fi:focus, textarea.fi:focus { border-color: var(--accent); }
 textarea.fi { resize: vertical; min-height: 80px; line-height: 1.6; }
+input[type=number].fi::-webkit-outer-spin-button, input[type=number].fi::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number].fi { -moz-appearance: textfield; }
 select.fi { cursor: pointer; }
 .form-error { font-size: 12px; color: var(--red); margin-top: 4px; }
 .checkbox-group { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 4px; }
@@ -1352,7 +1354,7 @@ async function openJobModal(id){
   const isEdit     = !!id;
 
   openModal(`<div class="modal" style="width:860px">
-    <div class="modal-hdr"><h3>${isEdit?esc(clientName):'New job'}</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="modal-hdr"><h3 style="${isEdit?'font-size:24px':''}">${isEdit?esc(clientName):'New job'}</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
     ${isEdit?`<input type="hidden" id="f-job-client" value="${j.client_id}">`:''}
     <div class="modal-2col">
       <div class="modal-col">
@@ -1386,7 +1388,7 @@ async function openJobModal(id){
         </div>
         <div class="form-row">
           <div class="form-group"><label class="lbl">Scheduled date</label><input class="fi" type="date" id="f-job-sched" value="${j.scheduled_date||''}"></div>
-          <div class="form-group"><label class="lbl">Cost ($)</label><input class="fi" type="number" id="f-job-cost" value="${j.cost||''}" placeholder="0.00"></div>
+          <div class="form-group"><label class="lbl">Cost ($)</label><input class="fi" type="number" id="f-job-cost" step="1" min="0" value="${j.cost||''}" placeholder="0"></div>
         </div>
       </div>
       <div class="modal-col" style="display:flex;flex-direction:column">
@@ -1402,7 +1404,7 @@ async function openJobModal(id){
         </div>
       </div>
     </div>
-    <div class="modal-ftr" style="${isEdit?'justify-content:space-between':''}">
+    <div class="modal-ftr" style="${isEdit?'justify-content:space-between;align-items:center':''}">
       ${isEdit?`<span style="font-size:13px;font-weight:600;color:var(--text3)">Edit job</span>`:''}
       <div style="display:flex;gap:8px">
         <button class="btn" onclick="closeModal()">Cancel</button>
