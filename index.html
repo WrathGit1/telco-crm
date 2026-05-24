@@ -1353,9 +1353,19 @@ async function openJobModal(id){
   const staffOpts  = `<option value="">— Unassigned —</option>` + (profiles||[]).map(p=>`<option value="${p.id}"${(j.assigned_to||( autoAssign?currentUser?.id:''))===p.id?' selected':''}>${esc(p.full_name)}</option>`).join('');
   const isEdit     = !!id;
 
-  openModal(`<div class="modal" style="width:860px">
-    <div class="modal-hdr"><h3 style="${isEdit?'font-size:24px':''}">${isEdit?esc(clientName):'New job'}</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
-    ${isEdit?`<input type="hidden" id="f-job-client" value="${j.client_id}">`:''}
+  openModal(`<div class="modal" style="width:860px${isEdit?';position:relative':''}">
+    ${isEdit
+      ? `<div class="modal-hdr" style="align-items:flex-end;border-bottom:1px solid var(--border);padding-bottom:0;margin-bottom:1.25rem">
+           <h3 style="font-size:24px;padding-bottom:10px">${esc(clientName)}</h3>
+           <div style="display:flex;margin-bottom:-1px">
+             <div class="modal-tab active" style="margin-bottom:0" onclick="switchJobTab('desc',this)">Description</div>
+             <div class="modal-tab" style="margin-bottom:0" onclick="switchJobTab('notes',this)">Job Notes</div>
+           </div>
+         </div>
+         <button class="modal-x" style="position:absolute;top:1rem;right:1rem" onclick="closeModal()"><i class="ti ti-x"></i></button>
+         <input type="hidden" id="f-job-client" value="${j.client_id}">`
+      : `<div class="modal-hdr"><h3>New job</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>`
+    }
     <div class="modal-2col">
       <div class="modal-col">
         <div class="form-row">
@@ -1392,10 +1402,10 @@ async function openJobModal(id){
         </div>
       </div>
       <div class="modal-col" style="display:flex;flex-direction:column">
-        <div class="modal-tabs" style="margin-bottom:8px">
+        ${!isEdit ? `<div class="modal-tabs" style="margin-bottom:8px">
           <div class="modal-tab active" onclick="switchJobTab('desc',this)">Description</div>
           <div class="modal-tab" onclick="switchJobTab('notes',this)">Job Notes</div>
-        </div>
+        </div>` : ''}
         <div id="job-tab-desc" style="display:flex;flex-direction:column;flex:1">
           <textarea class="fi" id="f-job-desc" placeholder="Job details..." style="flex:1;min-height:280px;resize:vertical">${esc(j.description||'')}</textarea>
         </div>
