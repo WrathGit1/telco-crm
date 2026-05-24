@@ -744,9 +744,9 @@ async function initApp(){
     document.getElementById('nav-admin-label').style.display = '';
     document.getElementById('nav-users').style.display = '';
     document.getElementById('nav-audit').style.display = '';
-    document.getElementById('btn-add-client').style.display = '';
-    document.getElementById('btn-add-job-list').style.display = '';
   }
+  if(isAdminOrOps()) document.getElementById('btn-add-client').style.display = '';
+  document.getElementById('btn-add-job-list').style.display = '';
 
   showScreen('app');
   await loadDashboard();
@@ -766,7 +766,7 @@ function showPage(name, el){
   // Update top CTA
   const cta = document.getElementById('topbar-cta');
   if(name==='clients' && isAdminOrOps()) cta.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openClientModal()"><i class="ti ti-plus"></i> Add client</button>`;
-  else if(name==='jobs' && isAdminOrOps()) cta.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openJobModal(null)"><i class="ti ti-plus"></i> Log job</button>`;
+  else if(name==='jobs') cta.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openJobModal(null)"><i class="ti ti-plus"></i> Log job</button>`;
   else cta.innerHTML = '';
   closeSidebar();
   refreshCurrentPage();
@@ -957,7 +957,7 @@ async function loadClientProfile(id){
       : `<div class="empty"><i class="ti ti-notes"></i><p>No notes yet.</p></div>`;
 
     // ── Jobs ──
-    document.getElementById('btn-add-job-profile').style.display = isAdminOrOps() ? '' : 'none';
+    document.getElementById('btn-add-job-profile').style.display = '';
     document.getElementById('client-jobs-list').innerHTML = (jobs||[]).length
       ? (jobs||[]).map(j=>`<div class="job-card">
           ${typeBadge(j.type)}
@@ -1323,7 +1323,8 @@ async function openJobModal(id){
 
   const clientOpts = (clients||[]).map(c=>`<option value="${c.id}"${(j.client_id||activeClientId)===c.id?' selected':''}>${esc(c.company)}</option>`).join('');
   const siteOpts   = sites.map(s=>`<option value="${s.id}"${j.site_id===s.id?' selected':''}>${esc(s.name)}</option>`).join('');
-  const staffOpts  = `<option value="">— Unassigned —</option>` + (profiles||[]).map(p=>`<option value="${p.id}"${j.assigned_to===p.id?' selected':''}>${esc(p.full_name)}</option>`).join('');
+  const autoAssign = !id && !isAdminOrOps(); // tech creating a new job
+  const staffOpts  = `<option value="">— Unassigned —</option>` + (profiles||[]).map(p=>`<option value="${p.id}"${(j.assigned_to||( autoAssign?currentUser?.id:''))===p.id?' selected':''}>${esc(p.full_name)}</option>`).join('');
   const isEdit     = !!id;
 
   openModal(`<div class="modal">
@@ -1378,7 +1379,9 @@ async function submitAddJob(){
   const clientId = document.getElementById('f-job-client').value;
   if(!clientId){ toast('Please select a client','warn'); return; }
   const siteVal     = document.getElementById('f-job-site').value;
-  const assignedVal = document.getElementById('f-job-assigned').value;
+  const assignedVal = isAdminOrOps()
+    ? document.getElementById('f-job-assigned').value
+    : currentUser.id; // techs are always auto-assigned to jobs they create
   const payload = {
     title, type: document.getElementById('f-job-type').value,
     status: document.getElementById('f-job-status').value,
