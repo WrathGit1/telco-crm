@@ -1355,7 +1355,7 @@ async function openJobModal(id){
 
   openModal(`<div class="modal" style="width:860px">
     ${isEdit
-      ? `<div class="modal-hdr" style="align-items:center;border-bottom:1px solid var(--border);padding-bottom:0;margin-bottom:1.25rem">
+      ? `<div class="modal-hdr" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center;border-bottom:1px solid var(--border);padding-bottom:0;margin-bottom:1.25rem">
            <h3 style="font-size:24px">${esc(clientName)}</h3>
            <div style="display:flex">
              <div class="modal-tab active" onclick="switchJobTab('desc',this)">Description</div>
