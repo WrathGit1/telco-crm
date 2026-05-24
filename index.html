@@ -1355,6 +1355,14 @@ async function openJobModal(id){
     <div class="modal-hdr"><h3>${isEdit?'Edit job':'New job'}</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
     <div class="modal-2col">
       <div class="modal-col">
+        ${isEdit
+          ? `<div class="form-group">
+               <div class="lbl">Client</div>
+               <div style="font-size:22px;font-weight:600;color:var(--text);padding:2px 0 4px">${esc(clientName)}</div>
+               <input type="hidden" id="f-job-client" value="${j.client_id}">
+             </div>`
+          : ''
+        }
         <div class="form-row">
           <div class="form-group"><label class="lbl">Type *</label>
             <select class="fi" id="f-job-type">
@@ -1370,14 +1378,6 @@ async function openJobModal(id){
             </select>
           </div>
         </div>
-        ${isEdit
-          ? `<div class="form-group">
-               <div class="lbl">Client</div>
-               <div style="font-size:18px;font-weight:600;color:var(--text);padding:4px 0 2px">${esc(clientName)}</div>
-               <input type="hidden" id="f-job-client" value="${j.client_id}">
-             </div>`
-          : ''
-        }
         <div class="form-group"><label class="lbl">Title *</label><input class="fi" id="f-job-title" value="${esc(j.title||'')}" placeholder="e.g. NBN line installation"></div>
         ${!isEdit
           ? `<div class="form-group"><label class="lbl">Client *</label>
