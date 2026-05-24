@@ -208,6 +208,16 @@ select.fi { cursor: pointer; }
 .job-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
 .job-meta { font-size: 11px; color: var(--text3); display: flex; flex-wrap: wrap; gap: 8px; }
 .job-cost { font-size: 13px; font-weight: 500; font-family: 'DM Mono', monospace; white-space: nowrap; }
+.job-link { cursor: pointer; font-weight: 500; }
+.job-link:hover { color: var(--accent); }
+.job-row .hover-del, .job-card .hover-del { opacity: 0; transition: opacity 0.15s; }
+.job-row:hover .hover-del, .job-card:hover .hover-del { opacity: 1; }
+.modal-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
+.modal-tab { padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s; }
+.modal-tab:hover { color: var(--text2); }
+.modal-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.modal-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.modal-col { display: flex; flex-direction: column; gap: 12px; }
 
 /* ── Sites ── */
 .site-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.875rem 1rem; margin-bottom: 8px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -264,6 +274,7 @@ select.fi { cursor: pointer; }
   .stats-grid { grid-template-columns: repeat(2,1fr); }
   .profile-layout { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
+  .modal-2col { grid-template-columns: 1fr; }
   .profile-card { position: static; }
   .content { padding: 1rem; }
 }
@@ -443,13 +454,13 @@ select.fi { cursor: pointer; }
           <!-- Right: tabs -->
           <div>
             <div class="tabs">
-              <div class="tab active" onclick="switchClientTab('notes',this)"><i class="ti ti-notes" style="font-size:15px"></i> Notes <span class="tab-count" id="tab-notes-count">0</span></div>
-              <div class="tab" onclick="switchClientTab('jobs',this)"><i class="ti ti-tool" style="font-size:15px"></i> Jobs <span class="tab-count" id="tab-jobs-count">0</span></div>
-              <div class="tab" onclick="switchClientTab('sites',this)"><i class="ti ti-map-pin" style="font-size:15px"></i> Sites <span class="tab-count" id="tab-sites-count">0</span></div>
+              <div class="tab active" id="client-tab-btn-jobs" onclick="switchClientTab('jobs')"><i class="ti ti-tool" style="font-size:15px"></i> Jobs <span class="tab-count" id="tab-jobs-count">0</span></div>
+              <div class="tab" id="client-tab-btn-notes" onclick="switchClientTab('notes')"><i class="ti ti-notes" style="font-size:15px"></i> Notes <span class="tab-count" id="tab-notes-count">0</span></div>
+              <div class="tab" id="client-tab-btn-sites" onclick="switchClientTab('sites')"><i class="ti ti-map-pin" style="font-size:15px"></i> Sites <span class="tab-count" id="tab-sites-count">0</span></div>
             </div>
 
             <!-- Notes tab -->
-            <div id="client-tab-notes">
+            <div id="client-tab-notes" style="display:none">
               <!-- System Credentials (pinned) -->
               <div class="note-card pinned" id="creds-card">
                 <div class="note-pinned-label"><i class="ti ti-lock" style="font-size:13px"></i> System Credentials</div>
@@ -469,7 +480,7 @@ select.fi { cursor: pointer; }
             </div>
 
             <!-- Jobs tab -->
-            <div id="client-tab-jobs" style="display:none">
+            <div id="client-tab-jobs">
               <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
                 <button class="btn btn-primary btn-sm" id="btn-add-job-profile" onclick="openJobModal()"><i class="ti ti-plus"></i> Log job</button>
               </div>
@@ -803,12 +814,19 @@ function openSidebar(){ document.getElementById('sidebar').classList.add('open')
 function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-backdrop').classList.remove('visible'); }
 
 // ── Client profile tabs ──
-function switchClientTab(tab, el){
-  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
+function switchClientTab(tab){
+  ['notes','jobs','sites'].forEach(t=>{
+    const btn = document.getElementById('client-tab-btn-'+t);
+    if(btn) btn.classList.toggle('active', t===tab);
+    const panel = document.getElementById('client-tab-'+t);
+    if(panel) panel.style.display = t===tab?'block':'none';
+  });
+}
+function switchJobTab(tab, el){
+  document.querySelectorAll('.modal-tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
-  document.getElementById('client-tab-notes').style.display  = tab==='notes'?'block':'none';
-  document.getElementById('client-tab-jobs').style.display   = tab==='jobs'?'block':'none';
-  document.getElementById('client-tab-sites').style.display  = tab==='sites'?'block':'none';
+  document.getElementById('job-tab-details').style.display = tab==='details'?'':'none';
+  document.getElementById('job-tab-notes').style.display   = tab==='notes'?'':'none';
 }
 
 // ── Job filters ──
@@ -912,7 +930,7 @@ async function loadClientProfile(id){
   try {
     const [{ data: client }, { data: sites }, { data: jobs }, { data: notes }] = await Promise.all([
       sb.from('clients').select('*').eq('id',id).single(),
-      sb.from('sites').select('*').eq('client_id',id).order('name'),
+      sb.from('sites').select('*').eq('client_id',id).order('created_at',{ascending:true}),
       sb.from('jobs').select('*,sites(name),profiles!jobs_assigned_to_fkey(full_name)').eq('client_id',id).order('created_at',{ascending:false}),
       sb.from('notes').select('*,profiles(full_name)').eq('client_id',id).order('created_at',{ascending:false})
     ]);
@@ -920,6 +938,7 @@ async function loadClientProfile(id){
 
     // ── Profile card ──
     function pf(icon,label,val){ return val?`<div class="pf"><i class="ti ${icon}"></i><div><div class="pf-label">${label}</div><div class="pf-value">${esc(val)}</div></div></div>`:''; }
+    const mainSite = (sites||[])[0];
     document.getElementById('client-profile-card').innerHTML = `
       <div class="profile-avatar">${initials(client.company)}</div>
       <div class="profile-name">${esc(client.company)}</div>
@@ -927,6 +946,7 @@ async function loadClientProfile(id){
       ${pf('ti-hash','Account number',client.account_number)}
       ${pf('ti-phone','Phone',client.phone)}
       ${pf('ti-mail','Email',client.email)}
+      ${mainSite?.address?pf('ti-map-pin','Main site',mainSite.address):''}
       ${pf('ti-calendar','Client since',fmtDate(client.created_at))}
       <div class="pf"><i class="ti ti-apps"></i><div><div class="pf-label">Services</div><div style="margin-top:4px">${svcBadges(client)}</div></div></div>
       <div class="profile-actions">
@@ -938,6 +958,7 @@ async function loadClientProfile(id){
     document.getElementById('tab-notes-count').textContent = (notes||[]).length;
     document.getElementById('tab-jobs-count').textContent  = (jobs||[]).length;
     document.getElementById('tab-sites-count').textContent = (sites||[]).length;
+    switchClientTab('jobs');
 
     // ── System credentials ──
     const credsDisplay = document.getElementById('creds-display');
@@ -967,7 +988,7 @@ async function loadClientProfile(id){
       ? (jobs||[]).map(j=>`<div class="job-card">
           ${typeBadge(j.type)}
           <div class="job-body">
-            <div class="job-title">${esc(j.title)}</div>
+            <div class="job-title${isAdminOrOps()||j.assigned_to===currentUser?.id?' job-link':''}" ${isAdminOrOps()||j.assigned_to===currentUser?.id?`onclick="openJobModal('${j.id}')"`:''} >${esc(j.title)}</div>
             <div class="job-meta">
               ${j.sites?.name?`<span>${esc(j.sites.name)}</span>`:''}
               ${statusBadge(j.status)}
@@ -976,10 +997,7 @@ async function loadClientProfile(id){
             </div>
           </div>
           ${j.cost?`<div class="job-cost">$${Number(j.cost).toFixed(2)}</div>`:''}
-          <div style="display:flex;gap:4px">
-            ${isAdminOrOps()||j.assigned_to===currentUser?.id?`<button class="btn btn-sm" onclick="openJobModal('${j.id}')"><i class="ti ti-edit"></i></button>`:''}
-            ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteJob('${j.id}')"><i class="ti ti-trash"></i></button>`:''}
-          </div>
+          ${isAdmin()?`<button class="btn btn-sm btn-danger hover-del" onclick="deleteJob('${j.id}')"><i class="ti ti-trash"></i></button>`:''}
         </div>`).join('')
       : `<div class="empty"><i class="ti ti-tool"></i><p>No jobs yet.</p></div>`;
 
@@ -1057,8 +1075,8 @@ function renderJobsList(){
   const tb = document.getElementById('jobs-tbody');
   if(!tb) return;
   tb.innerHTML = f.length ? f.map(j=>`
-    <tr>
-      <td><strong style="font-weight:500">${esc(j.title)}</strong></td>
+    <tr class="job-row">
+      <td>${isAdminOrOps()||j.assigned_to===currentUser?.id?`<span class="job-link" onclick="openJobModal('${j.id}')">${esc(j.title)}</span>`:`<span style="font-weight:500">${esc(j.title)}</span>`}</td>
       <td>${typeBadge(j.type)}</td>
       <td><span style="color:var(--accent);cursor:pointer" onclick="openClientProfile('${j.client_id}')">${esc(j.clients?.company||'Unknown')}</span></td>
       <td style="color:var(--text2);font-size:12px">${esc(j.sites?.name||'—')}</td>
@@ -1066,10 +1084,7 @@ function renderJobsList(){
       <td style="font-size:12px;color:var(--text2)">${esc(j.profiles?.full_name||'—')}</td>
       <td style="font-size:12px;color:var(--text2)">${fmtDate(j.scheduled_date)}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${j.cost?'$'+Number(j.cost).toFixed(2):'—'}</td>
-      <td><div style="display:flex;gap:4px">
-        ${isAdminOrOps()||j.assigned_to===currentUser?.id?`<button class="btn btn-sm" onclick="openJobModal('${j.id}')"><i class="ti ti-edit"></i></button>`:''}
-        ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteJob('${j.id}')"><i class="ti ti-trash"></i></button>`:''}
-      </div></td>
+      <td>${isAdmin()?`<button class="btn btn-sm btn-danger hover-del" onclick="deleteJob('${j.id}')"><i class="ti ti-trash"></i></button>`:''}</td>
     </tr>`).join('')
     : `<tr><td colspan="9"><div class="empty"><i class="ti ti-tool"></i><p>No jobs found.</p></div></td></tr>`;
 }
@@ -1327,43 +1342,65 @@ async function openJobModal(id){
   }
 
   const clientOpts = (clients||[]).map(c=>`<option value="${c.id}"${(j.client_id||activeClientId)===c.id?' selected':''}>${esc(c.company)}</option>`).join('');
-  const siteOpts   = sites.map(s=>`<option value="${s.id}"${j.site_id===s.id?' selected':''}>${esc(s.name)}</option>`).join('');
+  const defaultSiteId = j.site_id || (!id && sites.length ? sites[0].id : '');
+  const siteOpts   = sites.map(s=>`<option value="${s.id}"${defaultSiteId===s.id?' selected':''}>${esc(s.name)}</option>`).join('');
   const autoAssign = !id && !isAdminOrOps(); // tech creating a new job
   const staffOpts  = `<option value="">— Unassigned —</option>` + (profiles||[]).map(p=>`<option value="${p.id}"${(j.assigned_to||( autoAssign?currentUser?.id:''))===p.id?' selected':''}>${esc(p.full_name)}</option>`).join('');
   const isEdit     = !!id;
 
-  openModal(`<div class="modal">
+  openModal(`<div class="modal" style="width:720px">
     <div class="modal-hdr"><h3>${isEdit?'Edit job':'New job'}</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
-    <div class="form-row">
-      <div class="form-group"><label class="lbl">Type *</label>
-        <select class="fi" id="f-job-type">
-          <option ${j.type==='New Install'?'selected':''}>New Install</option>
-          <option ${j.type==='Service'||!j.type?'selected':''}>Service</option>
-        </select>
+    <div class="modal-tabs">
+      <div class="modal-tab active" onclick="switchJobTab('details',this)">Details</div>
+      <div class="modal-tab" onclick="switchJobTab('notes',this)">Job Notes</div>
+    </div>
+    <div id="job-tab-details">
+      <div class="modal-2col">
+        <div class="modal-col">
+          <div class="form-row">
+            <div class="form-group"><label class="lbl">Type *</label>
+              <select class="fi" id="f-job-type">
+                <option ${j.type==='New Install'?'selected':''}>New Install</option>
+                <option ${j.type==='Service'||!j.type?'selected':''}>Service</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="lbl">Status *</label>
+              <select class="fi" id="f-job-status">
+                <option ${j.status==='Pending'||!j.status?'selected':''}>Pending</option>
+                <option ${j.status==='In Progress'?'selected':''}>In Progress</option>
+                <option ${j.status==='Complete'?'selected':''}>Complete</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group"><label class="lbl">Title *</label><input class="fi" id="f-job-title" value="${esc(j.title||'')}" placeholder="e.g. NBN line installation"></div>
+          <div class="form-group"><label class="lbl">Client *</label>
+            <select class="fi" id="f-job-client" onchange="loadSitesForJob(this.value)">${clientOpts}</select>
+          </div>
+          <div class="form-group"><label class="lbl">Site</label>
+            <select class="fi" id="f-job-site">${siteOpts}</select>
+          </div>
+          <div class="form-group"><label class="lbl">Assigned to</label>
+            <select class="fi" id="f-job-assigned">${staffOpts}</select>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="lbl">Scheduled date</label><input class="fi" type="date" id="f-job-sched" value="${j.scheduled_date||''}"></div>
+            <div class="form-group"><label class="lbl">Cost ($)</label><input class="fi" type="number" id="f-job-cost" value="${j.cost||''}" placeholder="0.00"></div>
+          </div>
+        </div>
+        <div class="modal-col">
+          <div class="form-group" style="display:flex;flex-direction:column;flex:1">
+            <label class="lbl">Description</label>
+            <textarea class="fi" id="f-job-desc" placeholder="Job details..." style="flex:1;min-height:220px;resize:vertical">${esc(j.description||'')}</textarea>
+          </div>
+        </div>
       </div>
-      <div class="form-group"><label class="lbl">Status *</label>
-        <select class="fi" id="f-job-status">
-          <option ${j.status==='Pending'||!j.status?'selected':''}>Pending</option>
-          <option ${j.status==='In Progress'?'selected':''}>In Progress</option>
-          <option ${j.status==='Complete'?'selected':''}>Complete</option>
-        </select>
+    </div>
+    <div id="job-tab-notes" style="display:none">
+      <div class="form-group">
+        <label class="lbl">Job Notes</label>
+        <textarea class="fi" id="f-job-notes" placeholder="Internal notes, progress updates, follow-ups..." style="min-height:280px;resize:vertical">${esc(j.job_notes||'')}</textarea>
       </div>
     </div>
-    <div class="form-group"><label class="lbl">Title *</label><input class="fi" id="f-job-title" value="${esc(j.title||'')}" placeholder="e.g. NBN line installation"></div>
-    <div class="form-group"><label class="lbl">Client *</label>
-      <select class="fi" id="f-job-client" onchange="loadSitesForJob(this.value)">${clientOpts}</select>
-    </div>
-    <div class="form-group"><label class="lbl">Site</label>
-      <select class="fi" id="f-job-site"><option value="">— No site —</option>${siteOpts}</select>
-    </div>
-    <div class="form-group"><label class="lbl">Assigned to</label>
-      <select class="fi" id="f-job-assigned">${staffOpts}</select>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label class="lbl">Scheduled date</label><input class="fi" type="date" id="f-job-sched" value="${j.scheduled_date||''}"></div>
-      <div class="form-group"><label class="lbl">Cost ($)</label><input class="fi" type="number" id="f-job-cost" value="${j.cost||''}" placeholder="0.00"></div>
-    </div>
-    <div class="form-group"><label class="lbl">Description</label><textarea class="fi" id="f-job-desc" placeholder="Job details...">${esc(j.description||'')}</textarea></div>
     <div class="modal-ftr">
       <button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" onclick="${isEdit?`submitEditJob('${id}')`:'submitAddJob()'}">${isEdit?'Save changes':'Log job'}</button>
@@ -1375,7 +1412,7 @@ async function loadSitesForJob(clientId){
   const { data: sites } = await sb.from('sites').select('id,name').eq('client_id',clientId);
   const el = document.getElementById('f-job-site');
   if(!el) return;
-  el.innerHTML = `<option value="">— No site —</option>` + (sites||[]).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  el.innerHTML = (sites||[]).map((s,i)=>`<option value="${s.id}"${i===0?' selected':''}>${esc(s.name)}</option>`).join('');
 }
 
 async function submitAddJob(){
@@ -1395,6 +1432,7 @@ async function submitAddJob(){
     scheduled_date: document.getElementById('f-job-sched').value||null,
     cost: document.getElementById('f-job-cost').value||null,
     description: document.getElementById('f-job-desc').value.trim(),
+    job_notes: document.getElementById('f-job-notes').value.trim(),
     created_by: currentUser.id
   };
   setSyncStatus('syncing');
@@ -1420,7 +1458,8 @@ async function submitEditJob(id){
     site_id: siteVal||null, assigned_to: assignedVal||null,
     scheduled_date: document.getElementById('f-job-sched').value||null,
     cost: document.getElementById('f-job-cost').value||null,
-    description: document.getElementById('f-job-desc').value.trim()
+    description: document.getElementById('f-job-desc').value.trim(),
+    job_notes: document.getElementById('f-job-notes').value.trim()
   };
   setSyncStatus('syncing');
   try {
