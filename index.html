@@ -1366,7 +1366,13 @@ async function openJobModal(id){
       : `<div class="modal-hdr"><h3>New job</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>`
     }
     <div class="modal-2col">
-      <div class="modal-col">
+      <div class="modal-col" style="${isEdit?'justify-content:center':''}">
+        ${!isEdit
+          ? `<div class="form-group"><label class="lbl">Client *</label>
+               <select class="fi" id="f-job-client" onchange="loadSitesForJob(this.value)">${clientOpts}</select>
+             </div>`
+          : ''
+        }
         <div class="form-row">
           <div class="form-group"><label class="lbl">Type *</label>
             <select class="fi" id="f-job-type">
@@ -1383,12 +1389,6 @@ async function openJobModal(id){
           </div>
         </div>
         <div class="form-group"><label class="lbl">Title *</label><input class="fi" id="f-job-title" value="${esc(j.title||'')}" placeholder="e.g. NBN line installation"></div>
-        ${!isEdit
-          ? `<div class="form-group"><label class="lbl">Client *</label>
-               <select class="fi" id="f-job-client" onchange="loadSitesForJob(this.value)">${clientOpts}</select>
-             </div>`
-          : ''
-        }
         <div class="form-group"><label class="lbl">Site</label>
           <select class="fi" id="f-job-site">${siteOpts}</select>
         </div>
@@ -1406,10 +1406,10 @@ async function openJobModal(id){
           <div class="modal-tab" onclick="switchJobTab('notes',this)">Job Notes</div>
         </div>` : ''}
         <div id="job-tab-desc" style="display:flex;flex-direction:column;flex:1">
-          <textarea class="fi" id="f-job-desc" placeholder="Job details..." style="flex:1;min-height:280px;resize:vertical">${esc(j.description||'')}</textarea>
+          <textarea class="fi" id="f-job-desc" placeholder="Job details..." style="flex:1;min-height:${isEdit?'420':'280'}px;resize:vertical">${esc(j.description||'')}</textarea>
         </div>
         <div id="job-tab-notes" style="display:none;flex-direction:column;flex:1">
-          <textarea class="fi" id="f-job-notes" placeholder="Internal notes, progress updates, follow-ups..." style="flex:1;min-height:280px;resize:vertical">${esc(j.job_notes||'')}</textarea>
+          <textarea class="fi" id="f-job-notes" placeholder="Internal notes, progress updates, follow-ups..." style="flex:1;min-height:${isEdit?'420':'280'}px;resize:vertical">${esc(j.job_notes||'')}</textarea>
         </div>
       </div>
     </div>
