@@ -1352,17 +1352,10 @@ async function openJobModal(id){
   const isEdit     = !!id;
 
   openModal(`<div class="modal" style="width:860px">
-    <div class="modal-hdr"><h3>${isEdit?'Edit job':'New job'}</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="modal-hdr"><h3>${isEdit?esc(clientName):'New job'}</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    ${isEdit?`<input type="hidden" id="f-job-client" value="${j.client_id}">`:''}
     <div class="modal-2col">
       <div class="modal-col">
-        ${isEdit
-          ? `<div class="form-group">
-               <div class="lbl">Client</div>
-               <div style="font-size:22px;font-weight:600;color:var(--text);padding:2px 0 4px">${esc(clientName)}</div>
-               <input type="hidden" id="f-job-client" value="${j.client_id}">
-             </div>`
-          : ''
-        }
         <div class="form-row">
           <div class="form-group"><label class="lbl">Type *</label>
             <select class="fi" id="f-job-type">
@@ -1409,9 +1402,12 @@ async function openJobModal(id){
         </div>
       </div>
     </div>
-    <div class="modal-ftr">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="${isEdit?`submitEditJob('${id}')`:'submitAddJob()'}">${isEdit?'Save changes':'Log job'}</button>
+    <div class="modal-ftr" style="${isEdit?'justify-content:space-between':''}">
+      ${isEdit?`<span style="font-size:13px;font-weight:600;color:var(--text3)">Edit job</span>`:''}
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="${isEdit?`submitEditJob('${id}')`:'submitAddJob()'}">${isEdit?'Save changes':'Log job'}</button>
+      </div>
     </div>
   </div>`);
 }
