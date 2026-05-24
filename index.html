@@ -711,8 +711,8 @@ async function boot(){
 
   // Normal load — check for existing session
   // Timeout guard: if getSession hangs (stale/corrupt token), clear and show login
-  const sessionTimeout = setTimeout(async () => {
-    await sb.auth.signOut();
+  const sessionTimeout = setTimeout(() => {
+    Object.keys(localStorage).forEach(k => { if(k.startsWith('sb-')) localStorage.removeItem(k); });
     showScreen('login');
   }, 6000);
   try {
