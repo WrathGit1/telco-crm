@@ -218,6 +218,7 @@ select.fi { cursor: pointer; }
 .modal-tab.active { color: var(--text); border-bottom-color: var(--accent); }
 .modal-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .modal-col { display: flex; flex-direction: column; gap: 12px; }
+.job-tab-panel { min-height: 390px; }
 
 /* ── Sites ── */
 .site-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.875rem 1rem; margin-bottom: 8px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -1348,13 +1349,13 @@ async function openJobModal(id){
   const staffOpts  = `<option value="">— Unassigned —</option>` + (profiles||[]).map(p=>`<option value="${p.id}"${(j.assigned_to||( autoAssign?currentUser?.id:''))===p.id?' selected':''}>${esc(p.full_name)}</option>`).join('');
   const isEdit     = !!id;
 
-  openModal(`<div class="modal" style="width:720px">
+  openModal(`<div class="modal" style="width:860px">
     <div class="modal-hdr"><h3>${isEdit?'Edit job':'New job'}</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
     <div class="modal-tabs">
       <div class="modal-tab active" onclick="switchJobTab('details',this)">Details</div>
       <div class="modal-tab" onclick="switchJobTab('notes',this)">Job Notes</div>
     </div>
-    <div id="job-tab-details">
+    <div id="job-tab-details" class="job-tab-panel">
       <div class="modal-2col">
         <div class="modal-col">
           <div class="form-row">
@@ -1390,15 +1391,15 @@ async function openJobModal(id){
         <div class="modal-col">
           <div class="form-group" style="display:flex;flex-direction:column;flex:1">
             <label class="lbl">Description</label>
-            <textarea class="fi" id="f-job-desc" placeholder="Job details..." style="flex:1;min-height:220px;resize:vertical">${esc(j.description||'')}</textarea>
+            <textarea class="fi" id="f-job-desc" placeholder="Job details..." style="flex:1;min-height:320px;resize:vertical">${esc(j.description||'')}</textarea>
           </div>
         </div>
       </div>
     </div>
-    <div id="job-tab-notes" style="display:none">
-      <div class="form-group">
+    <div id="job-tab-notes" class="job-tab-panel" style="display:none">
+      <div class="form-group" style="display:flex;flex-direction:column;height:100%">
         <label class="lbl">Job Notes</label>
-        <textarea class="fi" id="f-job-notes" placeholder="Internal notes, progress updates, follow-ups..." style="min-height:280px;resize:vertical">${esc(j.job_notes||'')}</textarea>
+        <textarea class="fi" id="f-job-notes" placeholder="Internal notes, progress updates, follow-ups..." style="flex:1;min-height:350px;resize:vertical">${esc(j.job_notes||'')}</textarea>
       </div>
     </div>
     <div class="modal-ftr">
