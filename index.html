@@ -972,7 +972,7 @@ async function loadClientProfile(id){
           </div>
           ${j.cost?`<div class="job-cost">$${Number(j.cost).toFixed(2)}</div>`:''}
           <div style="display:flex;gap:4px">
-            <button class="btn btn-sm" onclick="openJobModal('${j.id}')"><i class="ti ti-edit"></i></button>
+            ${isAdminOrOps()||j.assigned_to===currentUser?.id?`<button class="btn btn-sm" onclick="openJobModal('${j.id}')"><i class="ti ti-edit"></i></button>`:''}
             ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteJob('${j.id}')"><i class="ti ti-trash"></i></button>`:''}
           </div>
         </div>`).join('')
@@ -1062,7 +1062,7 @@ function renderJobsList(){
       <td style="font-size:12px;color:var(--text2)">${fmtDate(j.scheduled_date)}</td>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${j.cost?'$'+Number(j.cost).toFixed(2):'—'}</td>
       <td><div style="display:flex;gap:4px">
-        <button class="btn btn-sm" onclick="openJobModal('${j.id}')"><i class="ti ti-edit"></i></button>
+        ${isAdminOrOps()||j.assigned_to===currentUser?.id?`<button class="btn btn-sm" onclick="openJobModal('${j.id}')"><i class="ti ti-edit"></i></button>`:''}
         ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteJob('${j.id}')"><i class="ti ti-trash"></i></button>`:''}
       </div></td>
     </tr>`).join('')
