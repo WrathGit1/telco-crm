@@ -684,15 +684,8 @@ async function boot(){
   if(code){
     recoveryFlow = (urlType === 'recovery' || urlType === 'invite');
     const { data, error } = await sb.auth.exchangeCodeForSession(code);
-    if(!error && recoveryFlow){
-      showScreen('set-password');
-      return;
-    } else if(!error && data?.session){
-      currentUser = data.session.user;
-      await initApp();
-      return;
-    }
-    // code exchange failed — fall through to normal load
+    if(!error && recoveryFlow){ showScreen('set-password'); return; }
+    else if(!error && data?.session){ currentUser = data.session.user; await initApp(); return; }
   }
 
   // Legacy implicit flow: older Supabase sends #type=recovery in hash
@@ -700,43 +693,22 @@ async function boot(){
   if(!code && (hash.includes('type=invite') || hash.includes('type=recovery'))){
     recoveryFlow = true;
     const { data, error } = await sb.auth.getSessionFromUrl();
-    if(!error && data?.session){
-      showScreen('set-password');
-      return;
-    }
+    if(!error && data?.session){ showScreen('set-password'); return; }
+    showScreen('login'); return;
   }
 
-  // Normal load — let onAuthStateChange fire INITIAL_SESSION instead of calling
-  // getSession/refreshSession manually (avoids token-rotation race conditions)
-  if(code || (!code && (hash.includes('type=invite') || hash.includes('type=recovery')))) return;
-
-  let bootDone = false;
-  const bootTimeout = setTimeout(() => {
-    if(!bootDone){
-      bootDone = true;
-      // Timed out waiting for session — clear any stale state and show login
-      Object.keys(localStorage).forEach(k => { if(k.startsWith('sb-')) localStorage.removeItem(k); });
-      showScreen('login');
-    }
-  }, 8000);
-
+  // Register ongoing session listener — handles fresh sign-ins, token refresh, sign-out
+  // Does NOT handle session restore on load (that's done below via getSession)
   sb.auth.onAuthStateChange(async (event, session) => {
-    if(event === 'INITIAL_SESSION'){
-      if(!bootDone){
-        bootDone = true;
-        clearTimeout(bootTimeout);
-        if(session){ currentUser = session.user; await initApp(); }
-        else { showScreen('login'); }
-      }
-    } else if(event === 'TOKEN_REFRESHED' && session){
+    if(event === 'TOKEN_REFRESHED' && session){
       currentUser = session.user;
     } else if(event === 'PASSWORD_RECOVERY'){
       recoveryFlow = true;
       showScreen('set-password');
     } else if(event === 'SIGNED_IN' && session && !recoveryFlow){
+      // Only act on fresh sign-ins from the login screen
       currentUser = session.user;
-      if(document.getElementById('screen-login').style.display !== 'none' ||
-         document.getElementById('screen-loading').style.display !== 'none'){
+      if(document.getElementById('screen-login').style.display !== 'none'){
         await initApp();
       }
     } else if(event === 'SIGNED_OUT'){
@@ -745,6 +717,22 @@ async function boot(){
       showScreen('login');
     }
   });
+
+  // Normal load — read cached session from localStorage (fast, no network call).
+  // Never call refreshSession() manually — Supabase refreshes silently in the
+  // background and signals TOKEN_REFRESHED; calling it here causes a race condition
+  // when the refresh token is already being consumed.
+  const withTimeout = (p, ms) => Promise.race([
+    p,
+    new Promise(resolve => setTimeout(() => resolve({ data: { session: null } }), ms))
+  ]);
+  const { data } = await withTimeout(sb.auth.getSession(), 5000);
+  if(data?.session){
+    currentUser = data.session.user;
+    await initApp();
+  } else {
+    showScreen('login');
+  }
 }
 
 async function initApp(){
