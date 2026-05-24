@@ -288,6 +288,7 @@ select.fi { cursor: pointer; }
   <div class="spinner-wrap">
     <div class="spinner"></div>
     <div style="font-size:13px;color:var(--text3)">Loading Easytel CRM...</div>
+    <div id="debug-out" style="font-size:11px;color:var(--text3);margin-top:12px;max-width:420px;text-align:center;word-break:break-all"></div>
   </div>
 </div>
 
@@ -663,12 +664,19 @@ async function doLogout(){
 // ============================================================
 //  BOOT
 // ============================================================
+function dbg(msg){ const el=document.getElementById('debug-out'); if(el) el.innerHTML += msg+'<br>'; }
+
 async function boot(){
   showScreen('loading');
   let recoveryFlow = false;
 
+  const _params = new URLSearchParams(window.location.search);
+  dbg('hash: '+( window.location.hash||'(none)'));
+  dbg('code: '+(_params.get('code')?'yes':'no')+' type: '+(_params.get('type')||'none'));
+
   // Register listener first so it never misses events
   sb.auth.onAuthStateChange(async (event, session) => {
+    dbg('authEvent: '+event);
     if(event === 'PASSWORD_RECOVERY'){
       recoveryFlow = true;
       showScreen('set-password');
@@ -687,7 +695,9 @@ async function boot(){
   const urlType = params.get('type');
   if(code){
     recoveryFlow = (urlType === 'recovery' || urlType === 'invite');
+    dbg('exchanging code...');
     const { data, error } = await sb.auth.exchangeCodeForSession(code);
+    dbg('exchange result: '+(error?'error: '+error.message:'ok, session='+(data.session?'yes':'no')));
     if(!error && recoveryFlow){
       showScreen('set-password');
       return;
@@ -702,7 +712,9 @@ async function boot(){
   const hash = window.location.hash;
   if(hash.includes('type=invite') || hash.includes('type=recovery')){
     recoveryFlow = true;
+    dbg('legacy hash flow...');
     const { data, error } = await sb.auth.getSessionFromUrl();
+    dbg('getSessionFromUrl: '+(error?'error: '+error.message:'ok'));
     if(!error && data.session){
       showScreen('set-password');
       return;
@@ -710,6 +722,7 @@ async function boot(){
   }
 
   // Normal load — check for existing session
+  dbg('checking existing session...');
   const { data: { session } } = await sb.auth.getSession();
   if(session){
     currentUser = session.user;
