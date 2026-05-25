@@ -690,13 +690,19 @@ async function boot(){
   showScreen('loading');
   let recoveryFlow = false;
 
+  // Shared timeout helper — prevents any auth call hanging forever
+  const withTimeout = (p, ms) => Promise.race([
+    p,
+    new Promise(resolve => setTimeout(() => resolve({ data: { session: null }, error: new Error('timeout') }), ms))
+  ]);
+
   // PKCE flow: newer Supabase sends ?code=xxx&type=recovery in query params
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   const urlType = params.get('type');
   if(code){
     recoveryFlow = (urlType === 'recovery' || urlType === 'invite');
-    const { data, error } = await sb.auth.exchangeCodeForSession(code);
+    const { data, error } = await withTimeout(sb.auth.exchangeCodeForSession(code), 8000);
     if(!error && recoveryFlow){ showScreen('set-password'); return; }
     else if(!error && data?.session){ currentUser = data.session.user; await initApp(); return; }
   }
@@ -705,7 +711,7 @@ async function boot(){
   const hash = window.location.hash;
   if(!code && (hash.includes('type=invite') || hash.includes('type=recovery'))){
     recoveryFlow = true;
-    const { data, error } = await sb.auth.getSessionFromUrl();
+    const { data, error } = await withTimeout(sb.auth.getSessionFromUrl(), 8000);
     if(!error && data?.session){ showScreen('set-password'); return; }
     showScreen('login'); return;
   }
@@ -735,10 +741,6 @@ async function boot(){
   // Never call refreshSession() manually — Supabase refreshes silently in the
   // background and signals TOKEN_REFRESHED; calling it here causes a race condition
   // when the refresh token is already being consumed.
-  const withTimeout = (p, ms) => Promise.race([
-    p,
-    new Promise(resolve => setTimeout(() => resolve({ data: { session: null } }), ms))
-  ]);
   const { data } = await withTimeout(sb.auth.getSession(), 5000);
   if(data?.session){
     currentUser = data.session.user;
