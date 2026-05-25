@@ -576,6 +576,7 @@ let jobFilters     = { type: 'all', status: 'all' };
 let allClients     = [];
 let allJobs        = [];
 let allProfiles    = [];
+let _ignoreNextPop = false;  // prevents popstate loop when closeModal calls history.back()
 
 // ============================================================
 //  DARK MODE (runs before anything renders)
@@ -768,6 +769,22 @@ async function initApp(){
   if(isAdminOrOps()) document.getElementById('btn-add-client').style.display = '';
   document.getElementById('btn-add-job-list').style.display = '';
 
+  // Seed history so the dashboard is the base state
+  history.replaceState({ type: 'page', name: 'dashboard' }, '');
+
+  // Back button: close modal if open, otherwise restore previous page
+  window.addEventListener('popstate', e => {
+    if(_ignoreNextPop){ _ignoreNextPop = false; return; }
+    const root = document.getElementById('modal-root');
+    if(root.innerHTML !== ''){ root.innerHTML = ''; return; }
+    if(e.state?.type === 'page'){
+      const navEl = document.querySelector(`[onclick*="showPage('${e.state.name}'"]`);
+      showPage(e.state.name, navEl, false);
+    } else if(e.state?.type === 'client'){
+      openClientProfile(e.state.id, false);
+    }
+  });
+
   showScreen('app');
   await loadDashboard();
 }
@@ -775,7 +792,7 @@ async function initApp(){
 // ============================================================
 //  NAVIGATION
 // ============================================================
-function showPage(name, el){
+function showPage(name, el, _push=true){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
@@ -789,6 +806,7 @@ function showPage(name, el){
   else if(name==='jobs') cta.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openJobModal(null)"><i class="ti ti-plus"></i> Log job</button>`;
   else cta.innerHTML = '';
   closeSidebar();
+  if(_push) history.pushState({ type: 'page', name }, '');
   refreshCurrentPage();
 }
 
@@ -801,7 +819,7 @@ function refreshCurrentPage(){
   else if(currentPage==='audit') loadAuditLog();
 }
 
-function openClientProfile(id){
+function openClientProfile(id, _push=true){
   activeClientId = id;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -810,6 +828,7 @@ function openClientProfile(id){
   document.getElementById('topbar-cta').innerHTML = '';
   currentPage = 'client-profile';
   closeSidebar();
+  if(_push) history.pushState({ type: 'client', id }, '');
   loadClientProfile(id);
 }
 
@@ -1167,8 +1186,15 @@ async function logAudit(action, table, recordId, oldData, newData){
 // ============================================================
 //  MODAL HELPERS
 // ============================================================
-function openModal(html){ document.getElementById('modal-root').innerHTML = `<div class="modal-overlay">${html}</div>`; }
-function closeModal(){ document.getElementById('modal-root').innerHTML = ''; }
+function openModal(html){
+  document.getElementById('modal-root').innerHTML = `<div class="modal-overlay">${html}</div>`;
+  history.pushState({ type: 'modal' }, '');
+}
+function closeModal(){
+  document.getElementById('modal-root').innerHTML = '';
+  _ignoreNextPop = true;
+  history.back();
+}
 
 // ============================================================
 //  CLIENT MODAL
