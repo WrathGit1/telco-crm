@@ -703,8 +703,9 @@ async function boot(){
   if(code){
     recoveryFlow = (urlType === 'recovery' || urlType === 'invite');
     const { data, error } = await withTimeout(sb.auth.exchangeCodeForSession(code), 8000);
-    if(!error && recoveryFlow){ showScreen('set-password'); return; }
-    else if(!error && data?.session){ currentUser = data.session.user; await initApp(); return; }
+    if(!error && recoveryFlow){ currentUser = data?.session?.user ?? null; showScreen('set-password'); return; }
+    else if(!error && data?.session){ currentUser = data.session.user; try{ await initApp(); }catch(e){ showScreen('login'); } return; }
+    else { showScreen('login'); return; }
   }
 
   // Legacy implicit flow: older Supabase sends #type=recovery in hash
@@ -712,7 +713,7 @@ async function boot(){
   if(!code && (hash.includes('type=invite') || hash.includes('type=recovery'))){
     recoveryFlow = true;
     const { data, error } = await withTimeout(sb.auth.getSessionFromUrl(), 8000);
-    if(!error && data?.session){ showScreen('set-password'); return; }
+    if(!error && data?.session){ currentUser = data.session.user; showScreen('set-password'); return; }
     showScreen('login'); return;
   }
 
@@ -723,12 +724,15 @@ async function boot(){
       currentUser = session.user;
     } else if(event === 'PASSWORD_RECOVERY'){
       recoveryFlow = true;
+      currentUser = session?.user ?? null;
       showScreen('set-password');
-    } else if(event === 'SIGNED_IN' && session && !recoveryFlow){
-      // Only act on fresh sign-ins from the login screen
+    } else if(event === 'SIGNED_IN' && session){
       currentUser = session.user;
-      if(document.getElementById('screen-login').style.display !== 'none'){
-        await initApp();
+      if(recoveryFlow){
+        showScreen('set-password');
+      } else if(document.getElementById('screen-login').style.display !== 'none'){
+        // Only act on fresh sign-ins from the login screen
+        try{ await initApp(); }catch(e){ showScreen('login'); }
       }
     } else if(event === 'SIGNED_OUT'){
       recoveryFlow = false;
@@ -744,7 +748,8 @@ async function boot(){
   const { data } = await withTimeout(sb.auth.getSession(), 5000);
   if(data?.session){
     currentUser = data.session.user;
-    await initApp();
+    if(recoveryFlow){ showScreen('set-password'); return; }
+    try{ await initApp(); }catch(e){ showScreen('login'); }
   } else {
     showScreen('login');
   }
