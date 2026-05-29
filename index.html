@@ -459,6 +459,7 @@ select.fi { cursor: pointer; }
             <div class="tabs">
               <div class="tab active" id="client-tab-btn-jobs" onclick="switchClientTab('jobs')"><i class="ti ti-tool" style="font-size:15px"></i> Jobs <span class="tab-count" id="tab-jobs-count">0</span></div>
               <div class="tab" id="client-tab-btn-notes" onclick="switchClientTab('notes')"><i class="ti ti-notes" style="font-size:15px"></i> Notes <span class="tab-count" id="tab-notes-count">0</span></div>
+              <div class="tab" id="client-tab-btn-porting" onclick="switchClientTab('porting')"><i class="ti ti-phone-outgoing" style="font-size:15px"></i> Porting <span class="tab-count" id="tab-porting-count">0</span></div>
               <div class="tab" id="client-tab-btn-sites" onclick="switchClientTab('sites')"><i class="ti ti-map-pin" style="font-size:15px"></i> Sites <span class="tab-count" id="tab-sites-count">0</span></div>
             </div>
 
@@ -488,6 +489,14 @@ select.fi { cursor: pointer; }
                 <button class="btn btn-primary btn-sm" id="btn-add-job-profile" onclick="openJobModal()"><i class="ti ti-plus"></i> Log job</button>
               </div>
               <div id="client-jobs-list"></div>
+            </div>
+
+            <!-- Porting tab -->
+            <div id="client-tab-porting" style="display:none">
+              <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+                <button class="btn btn-primary btn-sm" onclick="openPortingModal(null,activeClientId)"><i class="ti ti-plus"></i> Log port</button>
+              </div>
+              <div id="client-porting-list"></div>
             </div>
 
             <!-- Sites tab -->
@@ -870,7 +879,7 @@ function closeSidebar(){ document.getElementById('sidebar').classList.remove('op
 
 // ── Client profile tabs ──
 function switchClientTab(tab){
-  ['notes','jobs','sites'].forEach(t=>{
+  ['notes','jobs','porting','sites'].forEach(t=>{
     const btn = document.getElementById('client-tab-btn-'+t);
     if(btn) btn.classList.toggle('active', t===tab);
     const panel = document.getElementById('client-tab-'+t);
@@ -985,11 +994,12 @@ function renderClientsList(){
 async function loadClientProfile(id){
   setSyncStatus('syncing');
   try {
-    const [{ data: client }, { data: sites }, { data: jobs }, { data: notes }] = await Promise.all([
+    const [{ data: client }, { data: sites }, { data: jobs }, { data: notes }, { data: ports }] = await Promise.all([
       sb.from('clients').select('*').eq('id',id).single(),
       sb.from('sites').select('*').eq('client_id',id).order('created_at',{ascending:true}),
       sb.from('jobs').select('*,sites(name),profiles!jobs_assigned_to_fkey(full_name)').eq('client_id',id).order('due_date',{ascending:true,nullsFirst:false}),
-      sb.from('notes').select('*,profiles(full_name)').eq('client_id',id).order('created_at',{ascending:false})
+      sb.from('notes').select('*,profiles(full_name)').eq('client_id',id).order('created_at',{ascending:false}),
+      sb.from('porting').select('*').eq('client_id',id).order('port_date',{ascending:true,nullsFirst:false})
     ]);
     activeClientData = client;
 
@@ -1012,10 +1022,26 @@ async function loadClientProfile(id){
       </div>`;
 
     // ── Tab counts ──
-    document.getElementById('tab-notes-count').textContent = (notes||[]).length;
-    document.getElementById('tab-jobs-count').textContent  = (jobs||[]).length;
-    document.getElementById('tab-sites-count').textContent = (sites||[]).length;
+    document.getElementById('tab-notes-count').textContent   = (notes||[]).length;
+    document.getElementById('tab-jobs-count').textContent    = (jobs||[]).length;
+    document.getElementById('tab-porting-count').textContent = (ports||[]).length;
+    document.getElementById('tab-sites-count').textContent   = (sites||[]).length;
     switchClientTab('jobs');
+
+    // ── Porting ──
+    document.getElementById('client-porting-list').innerHTML = (ports||[]).length
+      ? (ports||[]).map(p=>`<div class="job-card" onclick="openPortingModal('${p.id}')" style="cursor:pointer">
+          ${portingStatusBadge(p.status)}
+          <div class="job-body">
+            <div class="job-title job-link">${esc(p.phone_numbers)}</div>
+            <div class="job-meta">
+              <span><i class="ti ti-building" style="font-size:11px"></i> ${esc(p.losing_carrier)}</span>
+              ${p.port_date?`<span><i class="ti ti-calendar" style="font-size:11px"></i> ${fmtDate(p.port_date)}</span>`:''}
+            </div>
+          </div>
+          ${isAdminOrOps()?`<button class="btn btn-sm btn-danger hover-del" onclick="event.stopPropagation();deletePorting('${p.id}')"><i class="ti ti-trash"></i></button>`:''}
+        </div>`).join('')
+      : `<div class="empty"><i class="ti ti-phone-outgoing"></i><p>No porting tickets yet.</p></div>`;
 
     // ── System credentials ──
     const credsDisplay = document.getElementById('creds-display');
@@ -1197,7 +1223,7 @@ function portingStatusBadge(s){
   return `<span class="badge ${map[s]||'badge-gray'}">${esc(s)}</span>`;
 }
 
-async function openPortingModal(id){
+async function openPortingModal(id, prefillClientId){
   const isEdit = !!id;
   let rec = null;
   if(isEdit){
@@ -1209,11 +1235,13 @@ async function openPortingModal(id){
     const { data: clients } = await sb.from('clients').select('id,company').order('company');
     if(clients) allClients = clients;
   }
-  const clientOptions = allClients.map(c=>`<option value="${c.id}" ${rec?.client_id===c.id?'selected':''}>${esc(c.company)}</option>`).join('');
+  const lockClient = isEdit || !!prefillClientId;
+  const effectiveClientId = rec?.client_id || prefillClientId || '';
+  const clientOptions = allClients.map(c=>`<option value="${c.id}" ${effectiveClientId===c.id?'selected':''}>${esc(c.company)}</option>`).join('');
   openModal(`<div class="modal">
     <div class="modal-hdr"><h3>${isEdit?'Edit porting ticket':'Log porting ticket'}</h3><button class="modal-x" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
     <div class="form-group"><label class="lbl">Client *</label>
-      <select class="fi" id="f-port-client" ${isEdit?'disabled':''}>
+      <select class="fi" id="f-port-client" ${lockClient?'disabled':''}>
         <option value="">— select client —</option>${clientOptions}
       </select>
     </div>
@@ -1243,7 +1271,9 @@ async function submitPorting(id){
   const notes    = document.getElementById('f-port-notes').value.trim() || null;
   const err      = document.getElementById('port-error');
   err.style.display = 'none';
-  if(!id && !clientId){ err.textContent='Please select a client.'; err.style.display='block'; return; }
+  // Disabled selects don't submit — fall back to the selected option's value
+  const resolvedClientId = clientId || document.getElementById('f-port-client').options[document.getElementById('f-port-client').selectedIndex]?.value || '';
+  if(!id && !resolvedClientId){ err.textContent='Please select a client.'; err.style.display='block'; return; }
   if(!numbers){ err.textContent='Phone number(s) are required.'; err.style.display='block'; return; }
   if(!carrier){  err.textContent='Losing carrier is required.';  err.style.display='block'; return; }
   setSyncStatus('syncing');
@@ -1253,11 +1283,12 @@ async function submitPorting(id){
       await logAudit('updated','porting',id,{},{phone_numbers:numbers,losing_carrier:carrier,port_date:portDate,status,notes});
       toast('Porting ticket updated');
     } else {
-      const { data } = await sb.from('porting').insert({ client_id:clientId, phone_numbers:numbers, losing_carrier:carrier, port_date:portDate, status, notes, created_by:currentUser?.id }).select().single();
-      await logAudit('created','porting',data.id,{},{client_id:clientId,phone_numbers:numbers,losing_carrier:carrier,status});
+      const { data } = await sb.from('porting').insert({ client_id:resolvedClientId, phone_numbers:numbers, losing_carrier:carrier, port_date:portDate, status, notes, created_by:currentUser?.id }).select().single();
+      await logAudit('created','porting',data.id,{},{client_id:resolvedClientId,phone_numbers:numbers,losing_carrier:carrier,status});
       toast('Porting ticket created');
     }
-    closeModal(); loadPorting();
+    closeModal();
+    if(currentPage==='client-profile') loadClientProfile(activeClientId); else loadPorting();
   } catch(e){ setSyncStatus('error'); toast('Save failed: '+e.message,'error'); }
 }
 
@@ -1266,7 +1297,8 @@ async function deletePorting(id){
   try {
     await sb.from('porting').delete().eq('id',id);
     await logAudit('deleted','porting',id,{},{});
-    toast('Porting ticket deleted'); loadPorting();
+    toast('Porting ticket deleted');
+    if(currentPage==='client-profile') loadClientProfile(activeClientId); else loadPorting();
   } catch(e){ toast('Delete failed: '+e.message,'error'); }
 }
 
